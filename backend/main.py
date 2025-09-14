@@ -1,13 +1,10 @@
-from video_engine.analysis_engine import ExerciseAnalyzer
+import uvicorn
+from fastapi import FastAPI
+from backend.routers import auth
 
-if __name__ == '__main__':
-    # --- CONFIGURATION ---
-    video_path = 'video.mp4'  # The video you want to analyze
-    exercise_type = 'pushup'    # The exercise type ('pushup', 'squat', etc.)
+app = FastAPI()
 
-    # --- EXECUTION ---
-    # 1. Initialize the analyzer with the type of exercise
-    analyzer = ExerciseAnalyzer(exercise_type=exercise_type)
-    
-    # 2. Run the fast, robust analysis and get the report
-    analyzer.process_video(video_path=video_path)
+app.include_router(auth.router)
+
+if __name__ == "__main__":
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
