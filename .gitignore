@@ -1,3 +1,5 @@
 video.mp4
-/backend/video_engine/__pycache__/
-venv
+__pycache__/
+venv/
+.env
+*.pyc
