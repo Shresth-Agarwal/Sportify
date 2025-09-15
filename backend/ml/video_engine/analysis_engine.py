@@ -52,7 +52,6 @@ class ExerciseAnalyzer:
         print("\nPass 1 Complete.")
         return angle_timeseries, list(form_feedback), fps, total_frames
 
-    # ... The rest of your analysis_engine.py file remains exactly the same ...
     def _analyze_reps(self, angle_timeseries: list, fps: float) -> list:
         print("Starting Pass 2: Signal Processing and Rep Analysis...")
         angles = np.array([angle if angle is not None else 180 for angle in angle_timeseries])
