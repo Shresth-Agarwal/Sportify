@@ -52,7 +52,7 @@ class PushupLogic(ExerciseLogic):
         if rep_state == 'down':
             elbow_angle = self.get_main_angle(landmarks, frame_shape)
             if elbow_angle is not None and elbow_angle > 95:
-                feedback.add("Form Issue: Go lower for full range of motion (elbows should be around 90° or less).")
+                feedback.add("Form Issue: Go lower for full range of motion (elbows should be around 90 degree or less).")
 
         # Check 3: Head Position
         head_angle = self._calculate_angle(r_ear, r_shoulder, r_hip)
