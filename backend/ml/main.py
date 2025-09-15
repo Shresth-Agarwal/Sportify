@@ -1,8 +1,8 @@
 import time
 import argparse
-from analysis_engine import ExerciseAnalyzer
-from exercise_logic import PushupLogic, SquatLogic
-from reporting import save_report_as_json
+from video_engine.analysis_engine import ExerciseAnalyzer
+from video_engine.exercise_logic import PushupLogic, SquatLogic
+from video_engine.reporting import save_report_as_json
 
 def run_analysis(video_path: str, exercise_type: str, output_path: str):
     """
