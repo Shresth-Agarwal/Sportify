@@ -3,164 +3,189 @@ import numpy as np
 import mediapipe as mp
 import math
 import time
+from scipy.signal import find_peaks
 
-# Initialize MediaPipe Pose
-mp_pose = mp.solutions.pose
-mp_drawing = mp.solutions.drawing_utils
+# --- Base Class for Exercise Logic (The "Plugin" Blueprint) ---
+class ExerciseLogic:
+    def __init__(self):
+        # Thresholds and parameters specific to each exercise
+        self.peak_prominence = 30  # How significant a peak must be to count
+        self.peak_distance_fps_multiplier = 0.4 # Minimum distance between reps in seconds
 
-class ExerciseAnalyzer:
-    """
-    A robust and fast exercise analyzer using Google's MediaPipe.
-    """
+    def get_main_angle(self, landmarks, frame_shape):
+        """Must be implemented by each exercise to return the primary angle for rep counting."""
+        raise NotImplementedError
 
-    def __init__(self, exercise_type):
-        self.exercise_type = exercise_type.lower()
-        self.pose = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    def check_form(self, landmarks, frame_shape):
+        """Must be implemented by each exercise to return form feedback."""
+        raise NotImplementedError
 
-        # Analysis state
-        self.rep_counter = 0
-        self.rep_state = 'up'
-        self.form_feedback = set()
-        self.rep_details = []
-        self.current_rep_start_time = None
-        self.min_angle_in_rep = 180
-        self.MIN_REP_TIME = 0.4  # Min seconds for a valid rep
+# --- Specific Exercise Implementations ---
+class PushupLogic(ExerciseLogic):
+    def __init__(self):
+        super().__init__()
 
-    def _calculate_angle(self, p1, p2, p3):
-        """Calculates angle from three landmark points."""
-        if p1 is None or p2 is None or p3 is None:
-            return None
-        # Note: MediaPipe landmarks are normalized; this logic is for pixel coords
-        angle = math.degrees(math.atan2(p3[1] - p2[1], p3[0] - p2[0]) -
-                             math.atan2(p1[1] - p2[1], p1[0] - p2[0]))
-        # Normalize to the range [0, 180]
-        angle = abs(angle)
-        if angle > 180:
-            angle = 360 - angle
-        return angle
-
-    def _process_pushup(self, landmarks, frame_shape):
-        """Analyzes push-up form using MediaPipe landmarks."""
-        DOWN_THRESHOLD, UP_THRESHOLD = 110, 145
-        
-        # Get landmark coordinates in pixels
+    def get_main_angle(self, landmarks, frame_shape):
         h, w, _ = frame_shape
-        shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x * w, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y * h]
-        elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x * w, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y * h]
-        wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x * w, landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y * h]
-        hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x * w, landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y * h]
-        ankle = [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x * w, landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y * h]
+        shoulder = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].y * h]
+        elbow = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_ELBOW.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_ELBOW.value].y * h]
+        wrist = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_WRIST.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_WRIST.value].y * h]
+        return self._calculate_angle(shoulder, elbow, wrist)
 
-        elbow_angle = self._calculate_angle(shoulder, elbow, wrist)
-        if elbow_angle is None: return
-
-        # Rep counting logic
-        if self.rep_state == 'up' and elbow_angle < DOWN_THRESHOLD:
-            self.rep_state = 'down'
-            self.current_rep_start_time = time.time()
-            self.min_angle_in_rep = elbow_angle
-        elif self.rep_state == 'down':
-            self.min_angle_in_rep = min(self.min_angle_in_rep, elbow_angle)
-            if elbow_angle > UP_THRESHOLD:
-                rep_time = time.time() - self.current_rep_start_time
-                if rep_time > self.MIN_REP_TIME:
-                    self.rep_state = 'up'
-                    self.rep_counter += 1
-                    self.rep_details.append({
-                        "rep_number": self.rep_counter, "time_taken": rep_time, "min_angle": self.min_angle_in_rep
-                    })
-                else: # Glitch, reset
-                    self.rep_state = 'up'
-
-        # Form feedback logic
+    def check_form(self, landmarks, frame_shape):
+        feedback = set()
+        h, w, _ = frame_shape
+        shoulder = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].y * h]
+        hip = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].y * h]
+        ankle = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_ANKLE.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_ANKLE.value].y * h]
+        
         body_angle = self._calculate_angle(shoulder, hip, ankle)
         if body_angle is not None and body_angle < 160:
-            self.form_feedback.add("Form Issue: Hips are sagging (body not straight).")
+            feedback.add("Form Issue: Keep your body straight (don't sag your hips).")
+        return feedback
 
-    def process_video(self, video_path):
-        """Processes a video file and generates a detailed report."""
+    def _calculate_angle(self, p1, p2, p3):
+        # Angle calculation logic remains the same
+        angle = math.degrees(math.atan2(p3[1] - p2[1], p3[0] - p2[0]) -
+                             math.atan2(p1[1] - p2[1], p1[0] - p2[0]))
+        angle = abs(angle)
+        return 360 - angle if angle > 180 else angle
+
+class SquatLogic(ExerciseLogic):
+    def __init__(self):
+        super().__init__()
+        self.peak_prominence = 20 # Squats can have less pronounced peaks
+
+    def get_main_angle(self, landmarks, frame_shape):
+        h, w, _ = frame_shape
+        hip = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].y * h]
+        knee = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE.value].y * h]
+        ankle = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_ANKLE.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_ANKLE.value].y * h]
+        return self._calculate_angle(hip, knee, ankle)
+
+    def check_form(self, landmarks, frame_shape):
+        feedback = set()
+        h, w, _ = frame_shape
+        shoulder = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_SHOULDER.value].y * h]
+        hip = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_HIP.value].y * h]
+        knee = [landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE.value].x * w, landmarks[mp.solutions.pose.PoseLandmark.LEFT_KNEE.value].y * h]
+        
+        back_angle = self._calculate_angle(shoulder, hip, knee)
+        if back_angle is not None and back_angle < 80:
+            feedback.add("Form Issue: Keep your chest up and back straight.")
+        return feedback
+        
+    def _calculate_angle(self, p1, p2, p3):
+        angle = math.degrees(math.atan2(p3[1] - p2[1], p3[0] - p2[0]) -
+                             math.atan2(p1[1] - p2[1], p1[0] - p2[0]))
+        angle = abs(angle)
+        return 360 - angle if angle > 180 else angle
+
+# --- The Main Analysis Engine ---
+class ExerciseAnalyzer:
+    def __init__(self, exercise_logic):
+        self.logic = exercise_logic
+        self.pose = mp.solutions.pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+
+    def process_video_and_extract_data(self, video_path):
         cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            print(f"Error: Could not open video file {video_path}")
-            return None
-
+        if not cap.isOpened(): return None, None, None
+        
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
-        workout_duration = total_frames / fps
-        start_time = time.time()
         
-        print(f"Starting analysis with MediaPipe engine...")
-        print(f"Video: {video_path}, Duration: {workout_duration:.2f}s, Frames: {total_frames}")
-
-        frame_idx = 0
-        while cap.isOpened():
+        angle_timeseries = []
+        form_feedback = set()
+        
+        print(f"Starting Pass 1: Fast Data Extraction...")
+        for frame_idx in range(total_frames):
             ret, frame = cap.read()
             if not ret: break
 
-            # Convert the BGR image to RGB
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            image.flags.writeable = False
-
-            # Make detection
             results = self.pose.process(image)
             
-            # Extract landmarks
+            current_angle = None
             if results.pose_landmarks:
-                if self.exercise_type == 'pushup':
-                    self._process_pushup(results.pose_landmarks.landmark, frame.shape)
+                landmarks = results.pose_landmarks.landmark
+                current_angle = self.logic.get_main_angle(landmarks, frame.shape)
+                frame_feedback = self.logic.check_form(landmarks, frame.shape)
+                form_feedback.update(frame_feedback)
             
-            frame_idx += 1
-            if frame_idx % 30 == 0:
-                print(f"Progress: {(frame_idx / total_frames) * 100:.2f}%", end='\r')
+            angle_timeseries.append(current_angle)
+            if (frame_idx + 1) % 30 == 0:
+                print(f"Progress: {((frame_idx + 1) / total_frames) * 100:.2f}%", end='\r')
         
         cap.release()
-        end_time = time.time()
-        print(f"\nAnalysis complete in {end_time - start_time:.2f} seconds.")
-        return self._generate_detailed_report(workout_duration)
+        print("\nPass 1 Complete.")
+        return angle_timeseries, form_feedback, fps, total_frames
 
-    def _generate_detailed_report(self, workout_duration):
-        """Generates the final performance report."""
-        # This function remains the same as its logic is sound.
+    def analyze_reps_from_angle_data(self, angle_timeseries, fps):
+        print("Starting Pass 2: Signal Processing and Rep Analysis...")
+        angles = np.array([angle if angle is not None else 180 for angle in angle_timeseries])
+        
+        peaks, _ = find_peaks(-angles, prominence=self.logic.peak_prominence, distance=fps*self.logic.peak_distance_fps_multiplier)
+        rep_count = len(peaks)
+        
+        if rep_count == 0: return {"rep_count": 0, "rep_details": []}
+
+        rep_details = []
+        for i, peak_frame in enumerate(peaks):
+            start_frame = peaks[i-1] if i > 0 else 0
+            min_angle = np.min(angles[start_frame:peak_frame+1])
+            time_taken = (peak_frame - start_frame) / fps
+            rep_details.append({ "rep_number": i + 1, "time_taken": time_taken, "min_angle": min_angle })
+
+        print("Pass 2 Complete.")
+        return {"rep_count": rep_count, "rep_details": rep_details}
+
+    def generate_report(self, analysis_results, form_feedback, workout_duration):
+        rep_count = analysis_results["rep_count"]
+        rep_details = analysis_results["rep_details"]
+
         print("\n" + "="*50)
         print("        DETAILED EXERCISE PERFORMANCE REPORT")
         print("="*50)
-        print("\n[ Overall Performance ]")
-        print(f"  - Exercise Analyzed:     {self.exercise_type.capitalize()}")
-        print(f"  - Total Repetitions:     {self.rep_counter}")
+        print(f"\n[ Overall Performance ]")
+        print(f"  - Exercise Analyzed:     {self.logic.__class__.__name__.replace('Logic', '')}")
+        print(f"  - Total Repetitions:     {rep_count}")
         print(f"  - Workout Duration:      {workout_duration:.2f} seconds")
-        if self.rep_counter > 0:
-            print(f"  - Average Pace:          {self.rep_counter / workout_duration:.2f} reps/second")
+        if rep_count > 0: print(f"  - Average Pace:          {rep_count / workout_duration:.2f} reps/second")
+        
+        print("\n[ Qualitative Form Feedback ]")
+        if not form_feedback:
+            print("  - Excellent! No consistent form issues were detected.")
+        else:
+            for feedback in sorted(list(form_feedback)): print(f"  - {feedback}")
+        
+        # ... The rest of the report generation logic ...
         print("\n[ Consistency & Endurance ]")
-        if len(self.rep_details) > 1:
-            all_rep_times = [rep['time_taken'] for rep in self.rep_details]
+        if len(rep_details) > 1:
+            all_rep_times = [rep['time_taken'] for rep in rep_details]
             avg_rep_time = np.mean(all_rep_times)
             fastest_rep, slowest_rep = min(all_rep_times), max(all_rep_times)
             
-            first_half_time = all_rep_times[:len(all_rep_times)//2]
-            second_half_time = all_rep_times[len(all_rep_times)//2:]
-            avg_first_half_speed = np.mean(first_half_time)
-            avg_second_half_speed = np.mean(second_half_time)
-            speed_change = ((avg_second_half_speed - avg_first_half_speed) / avg_first_half_speed) * 100
-
-            print(f"  - Average Time Per Rep:  {avg_rep_time:.2f} seconds")
-            print(f"  - Fastest Rep:           {fastest_rep:.2f} seconds")
-            print(f"  - Slowest Rep:           {slowest_rep:.2f} seconds")
-            if speed_change > 0:
-                print(f"  - Performance Drop-off:  Reps slowed by {speed_change:.1f}% in the second half.")
-            else:
-                 print(f"  - Strong Finish:         Reps sped up by {-speed_change:.1f}% in the second half.")
+            first_half = all_rep_times[:len(all_rep_times)//2]
+            second_half = all_rep_times[len(all_rep_times)//2:]
+            if first_half and second_half:
+                avg_first_half_speed = np.mean(first_half)
+                avg_second_half_speed = np.mean(second_half)
+                speed_change = ((avg_second_half_speed - avg_first_half_speed) / avg_first_half_speed) * 100
+                print(f"  - Average Time Per Rep:  {avg_rep_time:.2f} seconds")
+                print(f"  - Fastest Rep:           {fastest_rep:.2f} seconds")
+                print(f"  - Slowest Rep:           {slowest_rep:.2f} seconds")
+                if speed_change > 0:
+                    print(f"  - Performance Drop-off:  Reps slowed by {speed_change:.1f}% in the second half.")
+                else:
+                    print(f"  - Strong Finish:         Reps sped up by {-speed_change:.1f}% in the second half.")
         else: print("  - Not enough data for consistency analysis.")
+        
         print("\n[ Form & Range of Motion (ROM) ]")
-        if len(self.rep_details) > 0:
-            all_angles = [rep['min_angle'] for rep in self.rep_details]
+        if len(rep_details) > 0:
+            all_angles = [rep['min_angle'] for rep in rep_details]
             avg_depth, best_depth, worst_depth = np.mean(all_angles), min(all_angles), max(all_angles)
-            print(f"  - Avg. Rep Depth (Elbow Angle): {avg_depth:.2f}°")
+            print(f"  - Avg. Rep Depth (Angle): {avg_depth:.2f}°")
             print(f"  - Deepest Rep (Min Angle):      {best_depth:.2f}°")
             print(f"  - Shallowest Rep (Max Angle):   {worst_depth:.2f}°")
         else: print("  - No completed reps to analyze for ROM.")
-        print("\n[ Qualitative Form Feedback ]")
-        if not self.form_feedback:
-            print("  - Excellent! No consistent form issues were detected.")
-        else:
-            for feedback in sorted(list(self.form_feedback)): print(f"  - {feedback}")
         print("="*50)
