@@ -5,11 +5,19 @@ class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
+    age: int
+    height: float
+    weight: float
+    sport: str
 
 
 class UserOut(BaseModel):
     id: int
-    email: EmailStr
+    username: str
+    age: int
+    height: float | None = None
+    weight: float | None = None
+    sport: str | None = None
 
     class Config:
         from_attributes = True
@@ -18,3 +26,28 @@ class UserOut(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class ExerciseCreate(BaseModel):
+    name: str
+
+
+class RecordCreate(BaseModel):
+    exercise_id: int
+    value: float
+
+
+class RecordOut(BaseModel):
+    id: int
+    user_id: int
+    exercise_id: int
+    value: float
+    recorded_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
