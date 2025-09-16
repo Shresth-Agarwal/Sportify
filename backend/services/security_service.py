@@ -1,28 +1,11 @@
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from backend.database.db_config import get_db
-from backend.models import User
-from backend.token import SECRET_KEY, ALGORITHM
+from backend.models import Auth
+from backend.auth_utils import verify_password
 
 
-security = HTTPBearer()
-
-
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-):
-    token = credentials.credentials
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])  # pyright: ignore[reportArgumentType]
-        user_id: str = payload.get("sub")  # pyright: ignore[reportAssignmentType]
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="Token missing subject")
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Could not validate credentials")
-
-    return db.query(User).filter(User.id == int(user_id)).first()
+def verify_user_credentials(db: Session, email: str, password: str) -> int:
+    auth = db.query(Auth).filter(Auth.email == email).first()
+    if not auth or not verify_password(password, auth.hashed_password):  # type: ignore
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return auth.user.id

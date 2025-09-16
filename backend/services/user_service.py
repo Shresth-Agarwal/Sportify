@@ -1,10 +1,14 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-
 from backend.models import User, Auth
 from backend.schemas import UserCreate
-from backend.auth_utils import get_password_hash, verify_password
-from backend.token import verify_access_token
+from backend.auth_utils import get_password_hash
+from backend.database.db_config import get_db
+from backend.services.jwt_service import verify_jwt_token
+
+
+bearer = HTTPBearer()
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
@@ -50,32 +54,14 @@ def create_user(db: Session, user_in: UserCreate) -> User:
     return new_user
 
 
-def verify_user_credentials(db: Session, email: str, password: str) -> User:
-    auth = db.query(Auth).filter(Auth.email == email).first()
-    if not auth or not verify_password(password, auth.hashed_password):  # type: ignore
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    return auth.user
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    db: Session = Depends(get_db)
+) -> User:
+    user_id = verify_jwt_token(credentials)
+    user = db.query(User).filter(User.id == user_id).first()
 
-
-def get_authed_user(db: Session, token: str) -> User:
-    payload = verify_access_token(token)
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token missing subject (user_id)",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(status_code=401, detail="Invalid authentication")
 
     return user
