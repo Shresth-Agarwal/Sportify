@@ -23,6 +23,14 @@ class UserOut(BaseModel):
         from_attributes = True
 
 
+class UserUpdate(BaseModel):
+    username: str | None = None
+    age: int | None = None
+    height: float | None = None
+    weight: float | None = None
+    sport: str | None = None
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
