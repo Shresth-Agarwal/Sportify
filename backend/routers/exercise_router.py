@@ -15,7 +15,7 @@ def create_exercise(exercise_in: ExerciseCreate, db: Session = Depends(get_db)):
 
 @router.get("/{name}", response_model=ExerciseOut)
 def get_exercise_by_name(name: str, db: Session = Depends(get_db)):
-    return exercise_service.get_exercise_by_name(name.lower(), db)
+    return exercise_service.get_exercise_by_name(name, db)
 
 
 @router.get("/", response_model=list[ExerciseOut])
