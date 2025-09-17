@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from backend.models import Auth
-from backend.auth_utils import verify_password
+from backend.utils.auth_utils import verify_password
 
 
 def verify_user_credentials(db: Session, email: str, password: str) -> int:

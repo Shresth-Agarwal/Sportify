@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from backend.models import User, Auth
 from backend.schemas import UserCreate, UserUpdate
-from backend.auth_utils import get_password_hash
+from backend.utils.auth_utils import get_password_hash
 from backend.database.db_config import get_db
 from backend.services.jwt_service import verify_jwt_token
 
