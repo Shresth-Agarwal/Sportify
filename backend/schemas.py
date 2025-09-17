@@ -40,6 +40,11 @@ class ExerciseCreate(BaseModel):
     name: str
 
 
+class ExerciseOut(BaseModel):
+    id: int
+    name: str
+
+
 class RecordCreate(BaseModel):
     exercise_id: int
     value: float
