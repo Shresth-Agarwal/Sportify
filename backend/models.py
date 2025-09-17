@@ -31,7 +31,7 @@ class User(Base):
         return self.auth.email if self.auth else None
 
     auth = relationship("Auth", uselist=False, back_populates="user")
-    records = relationship("UserExerciseRecord", back_populates="user", cascade="all, delete")
+    records = relationship("ExerciseRecord", back_populates="user", cascade="all, delete")
 
 
 class Exercise(Base):
@@ -39,19 +39,24 @@ class Exercise(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), unique=True, nullable=False)
+    category = Column(String(100))
+    metric_type = Column(String(50))
 
     # Relationships
-    records = relationship("UserExerciseRecord", back_populates="exercise")
+    records = relationship("ExerciseRecord", back_populates="exercise")
 
 
-class UserExerciseRecord(Base):
-    __tablename__ = "user_exercise_records"
+class ExerciseRecord(Base):
+    __tablename__ = "exercise_records"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     exercise_id = Column(Integer, ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False)
-    value = Column(Float, nullable=False)
-    recorded_at = Column(DateTime, default=datetime.utcnow)
+
+    sets = Column(Integer, nullable=False)
+    reps = Column(Integer)
+    metric_value = Column(Float)
+    recorded_at = Column(DateTime, default=datetime.now())
 
     # Relationships
     user = relationship("User", back_populates="records")

@@ -1,0 +1,77 @@
+[
+  {
+    "name": "Bench Press",
+    "category": "Strength",
+    "metric_type": "weight"
+  },
+  {
+    "name": "Squat",
+    "category": "Strength",
+    "metric_type": "weight"
+  },
+  {
+    "name": "Deadlift",
+    "category": "Strength",
+    "metric_type": "weight"
+  },
+  {
+    "name": "Overhead Press",
+    "category": "Strength",
+    "metric_type": "weight"
+  },
+  {
+    "name": "Push Ups",
+    "category": "Strength",
+    "metric_type": "reps"
+  },
+  {
+    "name": "Pull Ups",
+    "category": "Strength",
+    "metric_type": "reps"
+  },
+  {
+    "name": "Plank",
+    "category": "Core",
+    "metric_type": "duration"
+  },
+  {
+    "name": "Bicep Curl",
+    "category": "Strength",
+    "metric_type": "weight"
+  },
+  {
+    "name": "Tricep Dips",
+    "category": "Strength",
+    "metric_type": "reps"
+  },
+  {
+    "name": "Lunge",
+    "category": "Strength",
+    "metric_type": "reps"
+  },
+  {
+    "name": "100m Sprint",
+    "category": "Athletics",
+    "metric_type": "time"
+  },
+  {
+    "name": "Marathon",
+    "category": "Athletics",
+    "metric_type": "time"
+  },
+  {
+    "name": "High Jump",
+    "category": "Athletics",
+    "metric_type": "height"
+  },
+  {
+    "name": "Long Jump",
+    "category": "Athletics",
+    "metric_type": "distance"
+  },
+  {
+    "name": "Burpees",
+    "category": "Cardio",
+    "metric_type": "reps"
+  }
+]

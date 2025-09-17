@@ -1,4 +1,6 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
+from backend.enums import MetricTypeEnum, CategoryEnum
 
 
 class UserCreate(BaseModel):
@@ -38,11 +40,18 @@ class UserLogin(BaseModel):
 
 class ExerciseCreate(BaseModel):
     name: str
+    category: Optional[CategoryEnum] = None
+    metric_type: Optional[MetricTypeEnum] = None
 
 
 class ExerciseOut(BaseModel):
     id: int
     name: str
+    category: Optional[CategoryEnum] = None
+    metric_type: Optional[MetricTypeEnum] = None
+
+    class Config:
+        from_attributes = True
 
 
 class RecordCreate(BaseModel):
