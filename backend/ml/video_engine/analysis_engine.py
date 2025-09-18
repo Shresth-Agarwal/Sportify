@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import mediapipe as mp
 from scipy.signal import find_peaks
-from video_engine.exercise_logic import ExerciseLogic
-from video_engine.reporting import AnalysisReport
+from backend.ml.video_engine.exercise_logic import ExerciseLogic
+from backend.ml.video_engine.reporting import AnalysisReport
 
 class ExerciseAnalyzer:
     """The core engine that processes video and generates an analysis."""

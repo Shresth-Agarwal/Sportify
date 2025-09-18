@@ -1,6 +1,6 @@
 import os
 import json
-from ml.main import run_analysis
+from backend.ml.main import run_analysis
 from backend.services.ml_summary import get_ai_summary
 
 # In-memory dictionary to act as a simple database for task statuses.

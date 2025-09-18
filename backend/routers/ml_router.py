@@ -1,8 +1,8 @@
 import uuid
 import os
 from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPException
-from schemas import AnalysisResponse, TaskStatus
-from services.ml_video import run_full_analysis, task_statuses
+from backend.schemas import AnalysisResponse, TaskStatus
+from backend.services.ml_video import run_full_analysis, task_statuses
 
 router = APIRouter()
 UPLOADS_DIR = "uploads"
