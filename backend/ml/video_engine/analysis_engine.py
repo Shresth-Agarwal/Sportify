@@ -3,7 +3,7 @@ import numpy as np
 import mediapipe as mp
 from scipy.signal import find_peaks
 from video_engine.exercise_logic import ExerciseLogic
-from video_engine.reporting import AnalysisReport, RepDetail
+from video_engine.reporting import AnalysisReport
 
 class ExerciseAnalyzer:
     """The core engine that processes video and generates an analysis."""
@@ -14,87 +14,100 @@ class ExerciseAnalyzer:
     def _extract_data(self, video_path: str):
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened(): raise IOError(f"Could not open video file: {video_path}")
-        
+
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         fps = cap.get(cv2.CAP_PROP_FPS)
-        
+        if fps == 0: fps = 30 # Default FPS if not available
+
         angle_timeseries, form_feedback = [], set()
         rep_state = 'up'
 
-        print(f"Starting Pass 1: Fast Data Extraction...")
+        print("Starting Pass 1: Fast Data Extraction...")
         for frame_idx in range(total_frames):
             ret, frame = cap.read()
             if not ret: break
 
             image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             results = self.pose.process(image)
-            
+
             current_angle = None
             if results.pose_landmarks:
                 landmarks = results.pose_landmarks.landmark
                 current_angle = self.logic.get_main_angle(landmarks, frame.shape)
                 angle_timeseries.append(current_angle)
-                
-                # Update rep state based on angle for contextual feedback
+
                 if current_angle is not None:
                     if current_angle < 100: rep_state = 'down'
                     if current_angle > 150: rep_state = 'up'
-                
-                # Pass the current state to the form checker
+
                 form_feedback.update(self.logic.get_form_feedback(landmarks, frame.shape, rep_state))
             else:
                 angle_timeseries.append(None)
-            
+
             if (frame_idx + 1) % 30 == 0:
                 print(f"Progress: {((frame_idx + 1) / total_frames) * 100:.2f}%", end='\r')
-        
+
         cap.release()
         print("\nPass 1 Complete.")
         return angle_timeseries, list(form_feedback), fps, total_frames
 
-    def _analyze_reps(self, angle_timeseries: list, fps: float) -> list:
+    def _analyze_reps(self, angle_timeseries: list, fps: float):
         print("Starting Pass 2: Signal Processing and Rep Analysis...")
+        # Replace None with a neutral angle (e.g., 180) for processing
         angles = np.array([angle if angle is not None else 180 for angle in angle_timeseries])
         
-        troughs, _ = find_peaks(-angles, prominence=20, distance=fps*0.4)
-        peaks, _ = find_peaks(angles, prominence=20, distance=fps*0.4)
+        # More robust peak detection
+        troughs, _ = find_peaks(-angles, prominence=30, distance=fps*0.5)
         
-        if len(troughs) == 0: return []
+        if len(troughs) == 0: return [], [], []
 
-        rep_details = []
-        for trough_frame in troughs:
-            peaks_before = peaks[peaks < trough_frame]
-            peaks_after = peaks[peaks > trough_frame]
+        rep_times, min_angles = [], []
+        for i in range(len(troughs)):
+            start_frame, end_frame = 0, len(angles) -1
+            if i > 0: start_frame = troughs[i-1]
+            if i < len(troughs) -1: end_frame = troughs[i+1]
 
-            if len(peaks_before) > 0 and len(peaks_after) > 0:
-                start_peak = peaks_before[-1]
-                end_peak = peaks_after[0]
+            # Find the peaks (highest angle) before and after the trough
+            peaks_before, _ = find_peaks(angles[start_frame:troughs[i]], prominence=30)
+            peaks_after, _ = find_peaks(angles[troughs[i]:end_frame], prominence=30)
 
-                min_angle = angles[trough_frame]
+            if peaks_before.size > 0 and peaks_after.size > 0:
+                start_peak = start_frame + peaks_before[-1]
+                end_peak = troughs[i] + peaks_after[0]
+                
                 time_taken = (end_peak - start_peak) / fps
+                # Filter out reps that are too fast or too slow
+                if 0.4 < time_taken < 5.0:
+                    rep_times.append(time_taken)
+                    min_angles.append(angles[troughs[i]])
 
-                if time_taken < 0.3 or time_taken > 5.0:
-                    continue
-
-                rep_details.append(RepDetail(
-                    rep_number=len(rep_details) + 1,
-                    time_taken=round(time_taken, 2),
-                    min_angle=round(min_angle, 2),
-                ))
-        
         print("Pass 2 Complete.")
-        return rep_details
+        return rep_times, min_angles
 
+    def _get_workout_intensity(self, avg_rep_time: float) -> str:
+        if avg_rep_time == 0: return 'N/A'
+        if avg_rep_time > 3.0: return 'Low'
+        if avg_rep_time > 1.5: return 'Moderate'
+        return 'High'
+    
     def process_video(self, video_path: str) -> AnalysisReport:
         angle_data, form_feedback, fps, total_frames = self._extract_data(video_path)
-        rep_details = self._analyze_reps(angle_data, fps)
-        workout_duration = total_frames / fps
+        rep_times, min_angles = self._analyze_reps(angle_data, fps)
         
+        total_reps = len(rep_times)
+        workout_duration = total_frames / fps
+        avg_rep_time = round(np.mean(rep_times), 2) if total_reps > 0 else 0
+        min_angle_range = (round(np.min(min_angles), 2), round(np.max(min_angles), 2)) if total_reps > 0 else (0,0)
+        
+        if total_reps == 0:
+            form_feedback.append("No valid reps were detected. This could mean the wrong exercise was selected, or the camera angle makes it difficult to see your form.")
+
         return AnalysisReport(
             exercise_type=self.logic.__class__.__name__.replace('Logic', ''),
-            total_repetitions=len(rep_details),
+            total_repetitions=total_reps,
             workout_duration_sec=round(workout_duration, 2),
-            average_pace_reps_per_sec=round(len(rep_details) / workout_duration, 2) if workout_duration > 0 else 0,
-            form_feedback=sorted(form_feedback),
-            rep_details=rep_details
+            average_rep_time=avg_rep_time,
+            min_angle_range=min_angle_range,
+            workout_intensity=self._get_workout_intensity(avg_rep_time),
+            form_feedback=sorted(form_feedback)
         )
