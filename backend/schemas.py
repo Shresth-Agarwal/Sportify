@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Any, Dict, Optional
+from datetime import datetime
 from backend.enums import MetricTypeEnum, CategoryEnum
 
 
@@ -54,17 +55,28 @@ class ExerciseOut(BaseModel):
         from_attributes = True
 
 
-class RecordCreate(BaseModel):
+class ExerciseRecordBase(BaseModel):
+    sets: Optional[int] = None
+    reps: Optional[int] = None
+    metric_value: Optional[float] = None
+    note: Optional[str] = None
+    details: Optional[Dict[str, Any]] = None
+
+
+class ExerciseRecordCreate(ExerciseRecordBase):
+    user_id: int
     exercise_id: int
-    value: float
 
 
-class RecordOut(BaseModel):
+class ExerciseRecordUpdate(ExerciseRecordBase):
+    pass
+
+
+class ExerciseRecordOut(ExerciseRecordBase):
     id: int
     user_id: int
     exercise_id: int
-    value: float
-    recorded_at: str
+    recorded_at: datetime
 
     class Config:
         from_attributes = True
