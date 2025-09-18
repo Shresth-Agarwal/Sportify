@@ -9,9 +9,9 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     age: int
-    height: float
-    weight: float
-    sport: str
+    height: float | None = None
+    weight: float | None = None
+    sport: str | None = None
 
 
 class UserOut(BaseModel):
