@@ -6,6 +6,8 @@ import os
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+genai.configure(api_key=GOOGLE_API_KEY)
+
 try:
     genai.configure(api_key=GOOGLE_API_KEY)
 except Exception as e:
@@ -39,7 +41,7 @@ def get_ai_summary(analysis_json: str) -> str:
     """
 
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:

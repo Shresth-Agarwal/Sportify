@@ -3,8 +3,6 @@ import json
 from backend.ml.main import run_analysis
 from backend.services.ml_summary import get_ai_summary
 
-# In-memory dictionary to act as a simple database for task statuses.
-# For a production app, you would use Redis, Celery, or a database.
 task_statuses = {}
 
 def run_full_analysis(video_path: str, exercise_type: str, task_id: str):
