@@ -1,0 +1,32 @@
+{
+    "hanisha": {
+        "password": "12345678",
+        "mode": "Guest",
+        "age": 16,
+        "guest_name": ""
+    },
+    "hanishaa": {
+        "password": "12345678",
+        "mode": "Athlete",
+        "age": 19,
+        "sport": "badminton",
+        "goals": "",
+        "fitness": "Beginner"
+    },
+    "hanisha11": {
+        "password": "12345678",
+        "mode": "Athlete",
+        "age": 20,
+        "sport": "",
+        "goals": "",
+        "fitness": "Beginner"
+    },
+    "nobita": {
+        "password": "nobita123",
+        "mode": "Coach",
+        "age": 40,
+        "experience": "Intermediate Coach (3-5 years)",
+        "specialization": "baseball",
+        "num_athletes": 1
+    }
+}
