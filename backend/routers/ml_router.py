@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPExce
 from backend.schemas import AnalysisResponse, TaskStatus
 from backend.services.ml_video import run_full_analysis, task_statuses
 
-router = APIRouter(prefix="/api", tags=["Analysis"])
+router = APIRouter(prefix="/ml", tags=["Analysis"])
 UPLOADS_DIR = "uploads"
 
 
