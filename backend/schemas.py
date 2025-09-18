@@ -85,3 +85,13 @@ class ExerciseRecordOut(ExerciseRecordBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class AnalysisResponse(BaseModel):
+    task_id: str
+    message: str
+
+
+class TaskStatus(BaseModel):
+    status: str
+    result: Optional[str] = None
