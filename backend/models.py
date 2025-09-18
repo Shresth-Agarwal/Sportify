@@ -1,7 +1,7 @@
 from datetime import datetime
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
-from .database.db_config import Base
+from backend.database.db_config import Base
 
 
 class Auth(Base):
@@ -53,11 +53,23 @@ class ExerciseRecord(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     exercise_id = Column(Integer, ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False)
 
-    sets = Column(Integer, nullable=False)
+    sets = Column(Integer)
     reps = Column(Integer)
     metric_value = Column(Float)
+    note = Column(String(255))
+    details = Column(JSON)
     recorded_at = Column(DateTime, default=datetime.now())
 
     # Relationships
     user = relationship("User", back_populates="records")
     exercise = relationship("Exercise", back_populates="records")
+
+
+class TrainingPlan(Base):
+    __tablename__ = "training_plans"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan = Column(JSON, nullable=False)
+
+    user = relationship("User", backref="training_plans")

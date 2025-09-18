@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.database.db_config import get_db
 from backend import schemas
-from backend.token import create_access_token
+from backend.jwt_token import create_access_token
 from backend.services import user_service, security_service
 
 router = APIRouter(
