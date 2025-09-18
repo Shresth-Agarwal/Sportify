@@ -4,8 +4,9 @@ from fastapi import APIRouter, UploadFile, File, Form, BackgroundTasks, HTTPExce
 from backend.schemas import AnalysisResponse, TaskStatus
 from backend.services.ml_video import run_full_analysis, task_statuses
 
-router = APIRouter()
+router = APIRouter(prefix="/api", tags=["Analysis"])
 UPLOADS_DIR = "uploads"
+
 
 @router.post("/analyze", response_model=AnalysisResponse)
 async def analyze_video(
@@ -19,7 +20,7 @@ async def analyze_video(
     """
     # Generate a unique ID for this analysis task
     task_id = str(uuid.uuid4())
-    
+
     # Define the path to save the uploaded video
     video_path = os.path.join(UPLOADS_DIR, f"{task_id}_{video.filename}")
 
@@ -29,7 +30,7 @@ async def analyze_video(
 
     # Add the long-running analysis function to the background tasks
     background_tasks.add_task(run_full_analysis, video_path, exercise_type, task_id)
-    
+
     # Immediately return the task ID to the client
     return {"task_id": task_id, "message": "Analysis has started."}
 
@@ -43,5 +44,5 @@ async def get_analysis_status(task_id: str):
     status = task_statuses.get(task_id)
     if not status:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     return status
